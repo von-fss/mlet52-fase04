@@ -2,8 +2,10 @@ import streamlit as st
 import pandas as pd
 import requests 
 import altair as alt
+import boto3
+import re 
 
-server_api_address =  "http://127.0.0.1:8000/yfinance/tickers"
+
 
 st.title("Page to view data ")
 containerFilter = st.container(height=100, border=False)
@@ -15,6 +17,7 @@ def loadDataPredicted():
     with containerChart:
         result =  st.session_state['name']    
         if result != None:
+            print(result)
             server_api_getHistory: str = f'http://127.0.0.1:8000/yfinance/getHistory/?ticker={result}'
             response = requests.get(server_api_getHistory)
             lstHistory = pd.DataFrame(response.json())
@@ -48,7 +51,18 @@ def loadDataPredicted():
 
 
 with containerFilter:
-    response = requests.get(server_api_address)
-    lstTickers = pd.DataFrame(response.json())
+
+    s3 = boto3.client('s3')
+    response = s3.list_objects_v2(Bucket='modeldataqbase', StartAfter='model/')
+    
+    
+    lstTickers = pd.DataFrame(columns=['name'])
+    if 'Contents' in response:
+        for obj in response['Contents']:
+            
+            dfObj = pd.DataFrame({'name': [''.join(re.findall('/(.*)\.', obj['Key']))]})
+            lstTickers = pd.concat([lstTickers, dfObj])
+    else:
+        print("No files found in the bucket.")    
+    
     result = st.selectbox("Select a Ticker to estimate the future value", lstTickers[['name']], key='name', on_change=loadDataPredicted)
-#result -> value of selectBox
