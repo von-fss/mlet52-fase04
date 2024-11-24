@@ -28,12 +28,19 @@ def loadDataPredicted():
 
             tmpDf = pd.DataFrame([{'Date': "Predicted", 'Close': response.json()['predicted'], 'Type': 'Prediction' }])
             lstHistory = pd.concat([lstHistory, tmpDf])
-            
+
+            server_api_training_parameters = f'http://127.0.0.1:8000/models/get_evaluate_from_training?ticker={result}&period=3mo'
+            response = requests.get(server_api_training_parameters)
+            tmpTrainningParam = response
+
+            server_api_evaluate_model = f'http://127.0.0.1:8000/models/evaluate?ticker={result}'
+            response = requests.get(server_api_evaluate_model)
+            tmpEvaluateModel = response            
 
             chart_data = pd.DataFrame({'Date': lstHistory['Date'], 
                                     'Value': lstHistory['Close'].round(0),
                                     'Type': lstHistory['Type']})
-            print(chart_data)
+            
             st.write('Here is the history of stock value')
             #st.scatter_chart(chart_data, y=['Value', 'Predicted'], x='Date', x_label='', y_label='' , height=550, use_container_width=True, color=["#FF0000", "#0000FF"])
             c = (
@@ -48,6 +55,32 @@ def loadDataPredicted():
             labels = c.mark_text(dx=0, dy=-10, align='center').encode(text='Value')
             #st.altair_chart(c, labels, use_container_width=True)
             c + labels
+
+            with st.container():
+                st.subheader('Dados do treino do modelo')
+                col1, col2 = st.columns(2)                                                
+                col2.text('')
+                col1.text(f"Epoch: {tmpTrainningParam.json()['epoch']}")
+                col1.text(f"MAE: {tmpTrainningParam.json()['MAE']}")
+                col1.text(f"time_step: {tmpTrainningParam.json()['time_step']}")
+                col1.text(f"batch_size: {tmpTrainningParam.json()['batch_size']}")
+                col1.text(f"nn_max_units: {tmpTrainningParam.json()['nn_max_units']}")
+                col2.text(f"RMSE: {tmpTrainningParam.json()['RMSE']}")
+                col2.text(f"learning_rate: {tmpTrainningParam.json()['learning_rate']}")
+                col2.text(f"nn_activation: {tmpTrainningParam.json()['nn_activation']}")
+                col2.text(f"MSE: {tmpTrainningParam.json()['MSE']}")
+
+
+            with st.container():
+                st.subheader('Qualidade atual do modelo')
+                col1, col2 = st.columns(2)                
+                col1.text(f"MSE: {tmpEvaluateModel.json()['MSE']}")
+                col1.text(f"MAE: {tmpEvaluateModel.json()['MAE']}")
+                col2.text(f"RMSE: {tmpEvaluateModel.json()['RMSE']}")
+            
+
+
+            
 
 
 with containerFilter:
